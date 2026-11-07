@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b6e6e">
+<title>ボート買い目ノート</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky header, one scrolling column of race cards, fixed bottom tab bar. Phone first. */
+:root{
+  --bg:#edf2f1; --surface:#ffffff; --surface2:#f4f8f7; --ink:#112a2e; --muted-solid:#587074;
+  --line:#d3dedd; --accent:#0b6e6e; --accent-ink:#ffffff; --buy:#087a3a; --buy-bg:#dcf5e5; --warn:#a15c07; --warn-bg:#fdf0d5;
+  --lose:#b42318; --lose-bg:#fde4e1; --shadow:0 1px 2px rgba(17,42,46,.08);
+  --font:"Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;
+  --num:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1a1c; --surface:#142629; --surface2:#1a3033; --ink:#e4eeed; --muted-solid:#8da6a9; --line:#264244;
+  --accent:#4cc2bd; --accent-ink:#06201f; --buy:#5fe08e; --buy-bg:#12382a; --warn:#f0b45a; --warn-bg:#3a2d12;
+  --lose:#ff8a80; --lose-bg:#42201d; --shadow:none; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1a1c; --surface:#142629; --surface2:#1a3033; --ink:#e4eeed; --muted-solid:#8da6a9; --line:#264244;
+  --accent:#4cc2bd; --accent-ink:#06201f; --buy:#5fe08e; --buy-bg:#12382a; --warn:#f0b45a; --warn-bg:#3a2d12;
+  --lose:#ff8a80; --lose-bg:#42201d; --shadow:none; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--font);
+  padding-left:max(14px,env(safe-area-inset-left,0px));padding-right:max(14px,env(safe-area-inset-right,0px));
+  padding-block:0 calc(72px + env(safe-area-inset-bottom,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--accent);z-index:30}
+.wrap{max-width:720px;margin:0 auto}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;margin:0 calc(-1*max(14px,env(safe-area-inset-left,0px)));
+  padding:10px max(14px,env(safe-area-inset-right,0px)) 10px max(14px,env(safe-area-inset-left,0px));background:var(--accent);color:var(--accent-ink);
+  display:flex;align-items:center;gap:10px}
+header h1{font-size:17px;margin:0;font-weight:700;letter-spacing:.02em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header .stamp{font:600 15px var(--num);letter-spacing:.03em;opacity:.95;white-space:nowrap}
+button{font:inherit;color:inherit}
+.iconbtn{min-width:44px;min-height:40px;border:1px solid color-mix(in srgb,var(--accent-ink) 55%,transparent);background:transparent;color:var(--accent-ink);border-radius:8px;font-weight:700;cursor:pointer}
+.iconbtn:active{opacity:.7}
+main{padding-block:12px 0;display:flex;flex-direction:column;gap:12px}
+h2{font-size:13px;margin:6px 0 0;font-weight:700;color:var(--muted-solid);letter-spacing:.06em}
+.banner{padding:10px 12px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:13.5px}
+.banner.err{background:var(--lose-bg);color:var(--lose)}
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.summary div{background:var(--surface);border-radius:10px;padding:8px 10px;box-shadow:var(--shadow)}
+.summary b{display:block;font:600 24px/1.1 var(--num);letter-spacing:.02em}
+.summary span{font-size:12px;color:var(--muted-solid)}
+.card{background:var(--surface);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.card.buy{outline:2px solid var(--buy)}
+.rhead{width:100%;display:flex;align-items:center;gap:10px;padding:11px 12px;background:none;border:0;text-align:left;cursor:pointer;min-height:56px}
+.rid{font:600 19px var(--num);min-width:62px;letter-spacing:.02em}
+.rid small{font:500 12px var(--font);color:var(--muted-solid);display:block;letter-spacing:0}
+.rmid{flex:1;min-width:0;font-size:13px;color:var(--muted-solid)}
+.rmid strong{color:var(--ink);font-weight:700}
+.time{font:600 18px var(--num);text-align:right;min-width:52px}
+.time small{display:block;font:500 11.5px var(--font);color:var(--muted-solid)}
+.time.soon{color:var(--lose)}
+.badge{display:inline-block;font-size:11.5px;font-weight:700;padding:1px 7px;border-radius:99px;background:var(--surface2);color:var(--muted-solid);margin-right:4px}
+.badge.full{background:var(--buy-bg);color:var(--buy)}
+.badge.pre{background:var(--warn-bg);color:var(--warn)}
+.badge.done{background:var(--surface2);color:var(--muted-solid)}
+.rbody{padding:0 12px 12px;border-top:1px solid var(--line)}
+.blist{margin-top:6px}
+.brow{display:grid;grid-template-columns:32px minmax(0,1fr) auto 84px;gap:2px 10px;align-items:center;padding:9px 6px;border-top:1px solid var(--line);border-radius:0}
+.brow.mark{background:var(--buy-bg)}
+.brow.win{background:var(--warn-bg)}
+.bname{min-width:0;font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bname small{display:block;font-weight:400;font-size:11.5px;color:var(--muted-solid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bp{font:600 22px/1.05 var(--num);text-align:right;letter-spacing:.01em}
+.bp small{display:block;font:500 11.5px var(--font);color:var(--muted-solid)}
+.bo{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.bo .ev{font:600 17px/1 var(--num);min-width:0;text-align:right}
+.bo .ev small{font:500 11px var(--font);color:var(--muted-solid);margin-right:4px}
+.bhead{display:grid;grid-template-columns:32px minmax(0,1fr) auto 84px;gap:10px;padding:8px 6px 2px;font-size:11.5px;color:var(--muted-solid)}
+.bhead span:nth-child(3),.bhead span:nth-child(4){text-align:right}
+.lane{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:7px;font:700 17px var(--num);border:1.5px solid #222}
+.l1{background:#fff;color:#111}.l2{background:#111;color:#fff;border-color:#111}.l3{background:#d62b2b;color:#fff;border-color:#a31c1c}
+.l4{background:#1f5fd1;color:#fff;border-color:#164aa6}.l5{background:#f4d21b;color:#111;border-color:#b79c0a}.l6{background:#1c9a4a;color:#fff;border-color:#13763a}
+input.odds{width:84px;min-height:42px;font:600 20px var(--num);text-align:right;padding:4px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--ink)}
+input.odds:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+.ev{min-width:54px;display:inline-block}
+.ev.ok{color:var(--buy)}.ev.no{color:var(--muted-solid)}
+.hint{font-size:12px;color:var(--muted-solid);margin:8px 0 0}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:0;background:var(--accent);color:var(--accent-ink);font-weight:700;cursor:pointer}
+.btn.buy{background:var(--buy);color:#fff}
+.btn.ghost{background:var(--surface2);color:var(--ink);border:1px solid var(--line)}
+.btn.danger{background:var(--lose);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.pick{display:flex;gap:10px;align-items:center;padding:11px 12px}
+.pick .info{flex:1;min-width:0}
+.pick .info b{font-weight:700}
+.pick .info div{font-size:12.5px;color:var(--muted-solid)}
+.pick .big{font:600 22px var(--num);text-align:right;line-height:1.15}
+.pick .big small{display:block;font:500 11.5px var(--font);color:var(--muted-solid)}
+.empty{padding:22px 14px;text-align:center;color:var(--muted-solid);background:var(--surface);border-radius:12px;font-size:14px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chip{flex:none;min-height:36px;padding:0 12px;border-radius:99px;background:var(--surface);border:1px solid var(--line);font-size:13.5px;cursor:pointer;font-weight:500}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:25;background:var(--surface);border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
+  padding:0 max(0px,env(safe-area-inset-left,0px)) env(safe-area-inset-bottom,0px) max(0px,env(safe-area-inset-right,0px))}
+nav button{min-height:58px;background:none;border:0;font-size:13px;font-weight:500;color:var(--muted-solid);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+nav button b{font:600 20px/1 var(--num)}
+nav button[aria-current="page"]{color:var(--accent);font-weight:700;box-shadow:inset 0 3px 0 var(--accent)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.kv label{font-size:14px}
+.kv input,.kv select{width:96px;min-height:42px;font:600 18px var(--num);text-align:right;padding:4px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--ink)}
+.panel{background:var(--surface);border-radius:12px;padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.panel p{margin:0;font-size:13.5px}
+.small{font-size:12.5px;color:var(--muted-solid)}
+.scroll{overflow-x:auto}
+.logt{width:100%;border-collapse:collapse}
+.logt th{font-size:11.5px;font-weight:500;color:var(--muted-solid);text-align:left;padding:8px 6px}
+.logt td{font:500 14px var(--font);padding:8px 6px;border-top:1px solid var(--line);white-space:nowrap}
+.pos{color:var(--buy);font-weight:700}.neg{color:var(--lose);font-weight:700}
+.cal{display:grid;grid-template-columns:88px 1fr 50px 44px;gap:4px 8px;font:600 15px var(--num);align-items:center}
+.cal .bar{height:8px;background:var(--surface2);border-radius:99px;position:relative}
+.cal .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--accent)}
+.cal .bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink)}
+.cal .h{font:500 11.5px var(--font);color:var(--muted-solid)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:no-preference){.rbody{animation:fade .12s ease-out}@keyframes fade{from{opacity:.4}to{opacity:1}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1 id="ttl">ボート買い目ノート</h1>
+  <span class="stamp" id="stamp">--:--</span>
+  <button class="iconbtn" id="reload" aria-label="最新に更新">更新</button>
+</header>
+<main id="main" aria-live="polite"></main>
+</div>
+<nav id="tabs" aria-label="画面切り替え">
+  <button data-tab="picks"><b id="n-picks">0</b>買い目</button>
+  <button data-tab="races"><b id="n-races">0</b>レース</button>
+  <button data-tab="log"><b id="n-log">0</b>記録</button>
+  <button data-tab="set"><b>⋯</b>設定</button>
+</nav>
+<script src="engine.js"></script>
+<script>
+(function(){
+"use strict";
+const API="https://boatraceopenapi.github.io/api/v1/today.json";
+const VENUES=["","桐生","戸田","江戸川","平和島","多摩川","浜名湖","蒲郡","常滑","津","三国","びわこ","住之江","尼崎","鳴門","丸亀","児島","宮島","徳山","下関","若松","芦屋","福岡","唐津","大村"];
+const CLS=["","A1","A2","B1","B2"];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------- storage (every access guarded) ---------- */
+const store={
+  get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},
+  set(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true}catch(e){return false}}
+};
+const S={
+  settings:Object.assign({th:1.3,cap:15,stake:100},store.get("bk.set",{})),
+  tab:store.get("bk.tab","picks"),
+  bets:store.get("bk.bets",[]),
+  hist:store.get("bk.hist",{}),      // finished-race records for the review screen, keyed by date
+  odds:{},                            // {raceKey:{boat:odds}} for the current date
+  models:null, enc:null, locked:false, lockMsg:"", data:null, races:[], date:null, fetchedAt:null, error:null,
+  open:new Set(), venue:0, sort:"hot", fromFile:false
+};
+function saveSettings(){store.set("bk.set",S.settings)}
+function saveOdds(){if(S.date)store.set("bk.odds."+S.date,S.odds)}
+function loadOdds(){
+  S.odds=S.date?store.get("bk.odds."+S.date,{}):{};
+  try{for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.indexOf("bk.odds.")===0&&k!=="bk.odds."+S.date)localStorage.removeItem(k)}}catch(e){}
+}
+
+/* ---------- unlock (the model file is stored encrypted) ---------- */
+async function decryptModels(enc,pw){
+  const b64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+  const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt:b64(enc.salt),iterations:enc.iters,hash:"SHA-256"},km,{name:"AES-GCM",length:256},false,["decrypt"]);
+  const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64(enc.iv)},key,b64(enc.ct));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function tryUnlock(pw){
+  try{S.models=await decryptModels(S.enc,pw.trim()); store.set("bk.pw",pw.trim()); S.locked=false; S.lockMsg=""; return true}
+  catch(e){S.locked=true; S.lockMsg="パスワードが違います。"; return false}
+}
+
+/* ---------- data ---------- */
+function jstDate(str){ // "2026-11-07 15:21:00" (JST)
+  if(!str)return null; const d=new Date(str.replace(" ","T")+"+09:00"); return isNaN(d)?null:d;
+}
+function build(data){
+  const out=[]; const st=(data&&data.programs&&data.programs.stadiums)||{};
+  for(const sid of Object.keys(st)){
+    const races=st[sid].races||{};
+    for(const rn of Object.keys(races)){
+      const r=races[rn]; const raw=Engine.rawFromApiRace(r);
+      const pay=r.result&&r.result.payouts;
+      const res=(pay&&Object.keys(pay).some(k=>Array.isArray(pay[k])&&pay[k].length))?r.result:null;
+      const o={key:sid+"-"+rn,sid:+sid,rn:+rn,venue:VENUES[+sid]||("場"+sid),closeAt:jstDate(r.closed_at),title:r.title||"",date:r.date,
+        raw:raw,pred:raw?Engine.predictRace(S.models,raw):null,names:{},cls:{},finished:!!res,winner:null,winPay:0};
+      const rc=r.racers||{};
+      for(const b of Object.keys(rc)){o.names[b]=rc[b].name||"";o.cls[b]=CLS[rc[b].rank_number]||""}
+      if(res){
+        const rr=res.racers||{};
+        for(const b of Object.keys(rr)){if(rr[b]&&rr[b].place_number===1)o.winner=+b}
+        const w=(res.payouts.win||[]);
+        if(w.length){o.winPay=w[0].amount; if(o.winner==null&&w[0].combination)o.winner=+w[0].combination}
+      }
+      out.push(o);
+    }
+  }
+  out.sort((a,b)=>(a.closeAt-b.closeAt)||(a.sid-b.sid)||(a.rn-b.rn));
+  return out;
+}
+function ingest(data,fromFile){
+  S.data=data; S.fromFile=!!fromFile;
+  const first=Object.values((data.programs&&data.programs.stadiums)||{})[0];
+  const fr=first&&first.races&&Object.values(first.races)[0];
+  S.date=fr?fr.date:null; loadOdds();
+  S.races=build(data); S.error=null; S.fetchedAt=new Date();
+  settleAndRecord();
+  render();
+}
+async function refresh(){
+  if(!S.models)return;
+  const btn=$("#reload"); btn.disabled=true; btn.textContent="…";
+  try{
+    const r=await fetch(API+"?t="+Date.now(),{cache:"no-store"});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    ingest(await r.json(),false);
+  }catch(e){S.error="当日データを取得できませんでした("+(e&&e.message||e)+")。電波を確認して「更新」を押すか、設定からファイルを読み込んでください。";render()}
+  btn.disabled=false; btn.textContent="更新";
+}
+
+/* ---------- logic ---------- */
+function evOf(r,boatIdx,odds){return r.pred?r.pred.p[boatIdx]*odds:null}
+function oddsOf(r,b){const o=(S.odds[r.key]||{})[b];return o>0?o:null}
+function isBuy(r,i){
+  if(!r.pred||r.finished)return false; const o=oddsOf(r,i+1); if(!o)return false;
+  const ev=r.pred.p[i]*o; return ev>=S.settings.th && (S.settings.cap<=0||o<=S.settings.cap);
+}
+function hotness(r){ // best expected value if the market priced the boat like our market estimate
+  if(!r.pred)return 0; let m=0; r.pred.p.forEach((p,i)=>{m=Math.max(m,p*r.pred.estOdds[i])}); return m;
+}
+function closed(r){return r.closeAt&&r.closeAt<=new Date()}
+function mins(r){return r.closeAt?Math.round((r.closeAt-new Date())/60000):null}
+function hhmm(d){return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"--:--"}
+function fmtMoney(n){return (n<0?"-":"")+Math.abs(Math.round(n)).toLocaleString("ja-JP")+"円"}
+function pct(x,d){return (100*x).toFixed(d==null?1:d)+"%"}
+
+function settleAndRecord(){
+  // settle logged bets and store finished-race predictions for the review screen
+  let changed=false;
+  for(const b of S.bets){
+    if(b.res||b.date!==S.date)continue;
+    const r=S.races.find(x=>x.sid===b.sid&&x.rn===b.rn); if(!r||!r.finished)continue;
+    const won=r.winner===b.boat; b.res={won:won,pay:won?r.winPay/100*b.stake:0}; changed=true;
+  }
+  if(changed)store.set("bk.bets",S.bets);
+  if(!S.date)return;
+  const day=S.hist[S.date]||{}; let hc=false;
+  for(const r of S.races){
+    if(!r.finished||!r.pred||day[r.key]||r.winner==null)continue;
+    day[r.key]={m:r.pred.mode,p:r.pred.p.map(x=>Math.round(x*1e4)/1e4),w:r.winner,e:r.pred.estOdds.map(x=>Math.round(x*10)/10)};hc=true;
+  }
+  if(hc){S.hist[S.date]=day; store.set("bk.hist",S.hist)}
+}
+
+/* ---------- rendering ---------- */
+function laneChip(n){return '<span class="lane l'+n+'" aria-label="'+n+'号艇">'+n+'</span>'}
+function raceCard(r){
+  const open=S.open.has(r.key); const m=mins(r); const buyAny=r.pred&&r.pred.p.some((_,i)=>isBuy(r,i));
+  let right;
+  if(r.finished)right='<span class="badge done">終了</span>';
+  else if(m!=null&&m<=0)right='<div class="time">締切<small>発売終了</small></div>';
+  else right='<div class="time'+(m!=null&&m<=10?" soon":"")+'">'+hhmm(r.closeAt)+'<small>あと'+(m==null?"-":m)+'分</small></div>';
+  const rmid=rmidHtml(r);
+  let h='<div class="card'+(buyAny?" buy":"")+'" data-key="'+r.key+'">';
+  h+='<button class="rhead" data-toggle="'+r.key+'" aria-expanded="'+open+'"><div class="rid">'+esc(r.venue)+' '+r.rn+'R<small>'+esc(r.title).slice(0,14)+'</small></div><div class="rmid">'+rmid+'</div>'+right+'</button>';
+  if(open)h+=raceBody(r);
+  return h+'</div>';
+}
+function rmidHtml(r){
+  const buyAny=r.pred&&!r.finished&&r.pred.p.some((_,i)=>isBuy(r,i));
+  const mode=r.pred?'<span class="badge '+(r.pred.mode==="full"?"full":"pre")+'">'+(r.pred.mode==="full"?"展示あり":"展示待ち")+'</span>':'<span class="badge">予測なし</span>';
+  let hintTxt="";
+  if(r.pred&&!r.finished){let bi=0,bm=0;r.pred.p.forEach((p,i)=>{const v=p*r.pred.estOdds[i];if(v>bm){bm=v;bi=i}});
+    hintTxt='注目 <strong>'+(bi+1)+'号艇</strong> '+bm.toFixed(2)}
+  if(r.finished&&r.winner)hintTxt='1着 <strong>'+r.winner+'号艇</strong> 単勝'+(r.winPay/100).toFixed(1)+'倍';
+  return mode+(buyAny?'<span class="badge full">買い</span>':'')+'<div>'+hintTxt+'</div>';
+}
+function btnsHtml(r){
+  let h="";
+  if(!r.finished)for(let i=0;i<6;i++){if(isBuy(r,i))h+='<button class="btn buy" data-buy="'+r.key+'|'+(i+1)+'">'+(i+1)+'号艇を買った('+S.settings.stake+'円)</button>'}
+  return h;
+}
+function refreshBits(r){
+  const card=document.querySelector('[data-key="'+r.key+'"]'); if(!card)return;
+  const buyAny=r.pred&&!r.finished&&r.pred.p.some((_,i)=>isBuy(r,i));
+  card.classList.toggle("buy",!!buyAny);
+  const m=card.querySelector(".rmid"); if(m)m.innerHTML=rmidHtml(r);
+  const b=card.querySelector(".btnrow"); if(b)b.innerHTML=btnsHtml(r);
+  $("#n-picks").textContent=S.races.filter(x=>x.pred&&!x.finished&&x.pred.p.some((_,i)=>isBuy(x,i))).length;
+}
+function raceBody(r){
+  if(!r.pred)return '<div class="rbody"><p class="hint">この出走表は6艇そろっていないため、予測を出していません。</p></div>';
+  const th=S.settings.th; let rows="";
+  for(let i=0;i<6;i++){
+    const b=i+1,p=r.pred.p[i],need=th/p,odds=oddsOf(r,b),ev=odds?p*odds:null,buy=isBuy(r,i);
+    const cls=r.finished&&r.winner===b?"win":(buy?"mark":"");
+    rows+='<div class="brow '+cls+'" data-b="'+b+'">'+laneChip(b)+'<div class="bname">'+esc(r.names[b])+'<small>'+esc(r.cls[b])+' ・ 市場想定 '+r.pred.estOdds[i].toFixed(1)+'倍</small></div>'
+      +'<div class="bp">'+pct(p)+'<small>必要 '+(need>=1000?"-":need.toFixed(1))+'倍</small></div>'
+      +'<div class="bo">'+(r.finished?'':'<input class="odds" inputmode="decimal" enterkeyhint="done" autocomplete="off" placeholder="倍" data-odds="'+r.key+'|'+b+'" value="'+(odds||"")+'" aria-label="'+b+'号艇の単勝オッズ">')
+      +'<span class="ev '+(buy?"ok":"no")+'" data-ev="'+r.key+'|'+b+'"><small>期待値</small>'+(ev?ev.toFixed(2):"-")+'</span></div></div>';
+  }
+  let h='<div class="rbody"><div class="bhead"><span></span><span>選手</span><span>勝率</span><span>現在オッズ</span></div><div class="blist">'+rows+'</div>';
+  h+='<p class="hint">必要オッズ = 期待値'+th.toFixed(2)+' ÷ 勝率。公式サイトの単勝オッズを入れると期待値を計算します。'+(r.pred.mode==="pre"?' 展示タイムが出ると予測が更新されます。':'')+'</p>';
+  if(!r.finished)h+='<div class="row btnrow" style="margin-top:8px">'+btnsHtml(r)+'</div>';
+  return h+'</div>';
+}
+function upcoming(){return S.races.filter(r=>r.pred&&!r.finished&&!closed(r))}
+function viewPicks(){
+  const up=upcoming(); const buys=[];
+  for(const r of S.races)if(r.pred&&!r.finished&&!closed(r))r.pred.p.forEach((p,i)=>{if(isBuy(r,i))buys.push({r:r,i:i,p:p,o:oddsOf(r,i+1)})});
+  const fullN=up.filter(r=>r.pred.mode==="full").length;
+  let h='<div class="summary"><div><b>'+up.length+'</b><span>発売中のレース</span></div><div><b>'+fullN+'</b><span>展示タイム入り</span></div><div><b>'+buys.length+'</b><span>買いサイン</span></div></div>';
+  h+='<h2>買いサイン(期待値 '+S.settings.th.toFixed(2)+' 以上'+(S.settings.cap>0?'・'+S.settings.cap+'倍以下':'')+')</h2>';
+  if(!buys.length)h+='<div class="empty">まだありません。下のレースを開いて、公式の単勝オッズを入れてください。</div>';
+  buys.sort((a,b)=>a.r.closeAt-b.r.closeAt);
+  for(const x of buys){
+    const r=x.r,m=mins(r),ev=x.p*x.o;
+    h+='<div class="card buy"><div class="pick">'+laneChip(x.i+1)+'<div class="info"><b>'+esc(r.venue)+' '+r.rn+'R</b> '+esc(r.names[x.i+1])+'<div>締切 '+hhmm(r.closeAt)+'(あと'+m+'分) ・ 勝率 '+pct(x.p)+' ・ '+(r.pred.mode==="full"?"展示あり":"展示待ち・暫定")+'</div></div><div class="big">'+ev.toFixed(2)+'<small>'+x.o+'倍</small></div></div>'
+      +'<div class="row" style="padding:0 12px 12px"><button class="btn buy" data-buy="'+r.key+'|'+(x.i+1)+'">買った('+S.settings.stake+'円)</button><button class="btn ghost" data-toggle="'+r.key+'" data-goto="races">レースを開く</button></div></div>';
+  }
+  h+='<h2>オッズを確認するレース</h2><div class="row"><div class="chips"><button class="chip" data-sort="hot" aria-pressed="'+(S.sort==="hot")+'">注目順</button><button class="chip" data-sort="time" aria-pressed="'+(S.sort==="time")+'">締切順</button></div></div>';
+  const list=up.slice(); if(S.sort==="hot")list.sort((a,b)=>hotness(b)-hotness(a)); else list.sort((a,b)=>a.closeAt-b.closeAt);
+  if(!list.length)h+='<div class="empty">発売中のレースがありません。</div>';
+  for(const r of list.slice(0,S.sort==="hot"?20:40))h+=raceCard(r);
+  h+='<p class="small">注目順は、モデルの勝率と「市場がつけそうなオッズ」の差が大きい順です。実際のオッズを入れるまで買いは判定されません。</p>';
+  return h;
+}
+function viewRaces(){
+  const vs=[...new Set(S.races.map(r=>r.sid))].sort((a,b)=>a-b);
+  let h='<div class="chips"><button class="chip" data-venue="0" aria-pressed="'+(S.venue===0)+'">全場</button>'+vs.map(v=>'<button class="chip" data-venue="'+v+'" aria-pressed="'+(S.venue===v)+'">'+esc(VENUES[v])+'</button>').join("")+'</div>';
+  const list=S.races.filter(r=>S.venue===0||r.sid===S.venue);
+  if(!list.length)h+='<div class="empty">当日のレースデータがありません。「更新」を押してください。</div>';
+  for(const r of list)h+=raceCard(r);
+  return h;
+}
+function stats(bets){
+  let stake=0,ret=0,n=0,w=0,open=0;
+  for(const b of bets){if(!b.res){open++;continue}stake+=b.stake;ret+=b.res.pay;n++;if(b.res.won)w++}
+  return {stake,ret,n,w,open,roi:stake?ret/stake:null};
+}
+function viewLog(){
+  const st=stats(S.bets);
+  let h='<div class="summary"><div><b>'+st.n+'</b><span>結果が出た買い</span></div><div><b>'+(st.roi==null?"-":(st.roi*100).toFixed(0)+"%")+'</b><span>回収率</span></div><div><b class="'+(st.ret-st.stake>=0?"pos":"neg")+'">'+(st.n?fmtMoney(st.ret-st.stake):"-")+'</b><span>損益</span></div></div>';
+  h+='<h2>買った記録</h2>';
+  if(!S.bets.length)h+='<div class="empty">まだ記録がありません。買いサインのカードで「買った」を押すと、ここに残ります。</div>';
+  else{
+    h+='<div class="card scroll"><table class="logt"><thead><tr><th>日</th><th>レース</th><th>艇</th><th>倍</th><th>期待</th><th>結果</th><th></th></tr></thead><tbody>';
+    for(const b of S.bets.slice().reverse()){
+      const res=b.res?(b.res.won?'<span class="pos">+'+Math.round(b.res.pay-b.stake)+'</span>':'<span class="neg">-'+b.stake+'</span>'):'待ち';
+      h+='<tr><td>'+esc(b.date.slice(5))+'</td><td>'+esc(VENUES[b.sid])+b.rn+'R</td><td>'+b.boat+'</td><td>'+b.odds+'</td><td>'+b.ev.toFixed(2)+'</td><td>'+res+'</td><td><button class="chip" data-del="'+b.id+'" aria-label="この記録を消す">消す</button></td></tr>';
+    }
+    h+='</tbody></table></div><div class="row"><button class="btn ghost" id="copycsv">記録をコピー(CSV)</button></div>';
+  }
+  h+='<h2>予想と実績の差(終了したレース)</h2>'+reviewHtml();
+  return h;
+}
+function reviewHtml(){
+  const recs=[]; for(const d of Object.keys(S.hist))for(const k of Object.keys(S.hist[d]))recs.push(S.hist[d][k]);
+  if(!recs.length)return '<div class="empty">レースが終わると、勝率の予想と実際の結果を比べて、ここに出します。</div>';
+  let hit=0,sumP=0,top=0; const bins=[[0,.05],[.05,.1],[.1,.2],[.2,.35],[.35,.5],[.5,1.01]]; const acc=bins.map(()=>({n:0,w:0,p:0}));
+  for(const r of recs){
+    let bi=0;r.p.forEach((p,i)=>{if(p>r.p[bi])bi=i});
+    if(r.w===bi+1)hit++; sumP+=r.p[r.w-1]||0; top+=r.p[bi];
+    r.p.forEach((p,i)=>{const k=bins.findIndex(b=>p>=b[0]&&p<b[1]);if(k>=0){acc[k].n++;acc[k].p+=p;if(r.w===i+1)acc[k].w++}});
+  }
+  let h='<div class="panel"><div class="kv"><span>モデルの本命が1着</span><b>'+pct(hit/recs.length)+' ('+hit+'/'+recs.length+')</b><span>本命の予想勝率の平均</span><b>'+pct(top/recs.length)+'</b><span>勝った艇に付けた予想勝率</span><b>'+pct(sumP/recs.length)+'</b></div>';
+  h+='<div class="small">予想勝率の帯ごとに、実際に勝った割合を比べます。黒い線が予想、青い棒が実績です。近いほど予想が当たっています。</div><div class="cal"><span class="h">予想勝率</span><span class="h"></span><span class="h">実績</span><span class="h">件数</span>';
+  acc.forEach((a,i)=>{if(!a.n)return;const lab=Math.round(bins[i][0]*100)+"〜"+Math.min(100,Math.round(bins[i][1]*100))+"%";const real=a.w/a.n,pr=a.p/a.n;
+    h+='<span>'+lab+'</span><span class="bar"><i style="width:'+Math.min(100,real*100)+'%"></i><u style="left:'+Math.min(99.5,pr*100)+'%"></u></span><span>'+pct(real,0)+'</span><span>'+a.n+'</span>'});
+  return h+'</div></div>';
+}
+function viewSet(){
+  const s=S.settings;
+  let h='<div class="panel"><div class="kv"><label for="s-th">買う期待値の下限</label><input id="s-th" inputmode="decimal" value="'+s.th+'"><label for="s-cap">オッズの上限(0で無し)</label><input id="s-cap" inputmode="decimal" value="'+s.cap+'"><label for="s-stake">1回の賭け金(円)</label><input id="s-stake" inputmode="numeric" value="'+s.stake+'"></div>'
+    +'<p class="small">期待値 = モデルの勝率 × 単勝オッズ。検証では、期待値1.3以上かつ15倍以下が最も安定していました。</p></div>';
+  h+='<div class="panel"><b>当日データ</b><p class="small">'+(S.fetchedAt?'取得 '+hhmm(S.fetchedAt)+(S.fromFile?'(ファイルから)':''):'未取得')+' ・ 日付 '+(S.date||"-")+' ・ '+S.races.length+'レース</p>'
+    +'<p class="small">出走表と直前情報は BoatraceOpenAPI(非公式・MIT)から約3分おきに更新されます。</p>'
+    +'<div class="row"><button class="btn ghost" id="pickfile">ファイルから読み込む</button><input type="file" id="file" accept=".json,application/json" hidden></div></div>';
+  h+='<div class="panel"><b>モデルについて</b><p class="small">公式の出走表・成績(2023年11月〜'+esc((S.models&&S.models.trained_through)||"-")+')で学習した、単勝の勝率モデルです。オッズは使っていません。</p>'
+    +'<p class="small">2026年1〜11月の月次検証(最終オッズ基準)では、期待値1.3以上で回収率約1.2、15倍以下に絞ると約1.15でした。ただし実際に買う数分前のオッズは最終と違います。買う直前のオッズが最終より2割ほど高く見えていると、利益はほぼ消えます。まず少額で記録を取り、回収率を確かめてください。</p></div>';
+  h+='<div class="panel"><b>ロック</b><p class="small">この端末に覚えさせたパスワードを忘れさせ、画面をロックします。</p><div class="row"><button class="btn ghost" id="forgetpw">ロックする</button></div></div>';
+  h+='<div class="panel"><b>データの消去</b><p class="small">この端末に保存した買い目の記録・入力したオッズ・振り返りを消します。</p><div class="row"><button class="btn danger" id="wipe">すべて消す</button></div></div>';
+  return h;
+}
+function render(){
+  const ae=document.activeElement; if(ae&&ae.matches&&ae.matches("input.odds,#s-th,#s-cap,#s-stake")){S.pending=true;return}
+  S.pending=false;
+  const main=$("#main"); let h="";
+  if(S.error)h+='<div class="banner err">'+esc(S.error)+'</div>';
+  if(S.locked){
+    main.innerHTML='<div class="panel" style="margin-top:8px"><b>ロックされています</b><p class="small">予測モデルは暗号化されています。パスワードを入れると開きます。この端末には覚えさせるので、入力は最初の1回だけです。</p>'
+      +'<div class="row"><input id="pw" type="password" autocomplete="current-password" style="flex:1;min-width:0;min-height:44px;font:600 18px var(--num);padding:4px 10px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface2);color:var(--ink)" aria-label="パスワード"><button class="btn" id="unlock">開く</button></div>'
+      +(S.lockMsg?'<div class="banner err">'+esc(S.lockMsg)+'</div>':'')+'</div>';
+    $("#stamp").textContent="ロック中"; return;
+  }
+  if(!S.models)h+='<div class="banner err">モデルを読み込めていません。ページを開き直してください。</div>';
+  if(S.data&&S.races.length&&!S.races.some(r=>r.closeAt&&r.closeAt.toDateString()===new Date().toDateString()))h+='<div class="banner">表示中のデータは今日の分ではありません('+esc(S.date)+')。</div>';
+  if(S.tab==="picks")h+=viewPicks();else if(S.tab==="races")h+=viewRaces();else if(S.tab==="log")h+=viewLog();else h+=viewSet();
+  const y=window.scrollY; main.innerHTML=h; window.scrollTo(0,y);
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===S.tab?"page":"false"));
+  $("#stamp").textContent=S.fetchedAt?hhmm(S.fetchedAt):"--:--";
+  $("#n-races").textContent=S.races.length; $("#n-picks").textContent=S.races.filter(r=>r.pred&&!r.finished&&r.pred.p.some((_,i)=>isBuy(r,i))).length;
+  $("#n-log").textContent=S.bets.length;
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t)return;
+  if(t.dataset.tab){S.tab=t.dataset.tab;store.set("bk.tab",S.tab);render();window.scrollTo(0,0);return}
+  if(t.id==="reload"){refresh();return}
+  if(t.dataset.toggle){const k=t.dataset.toggle; if(t.dataset.goto){S.tab=t.dataset.goto;store.set("bk.tab",S.tab);S.open.add(k);S.venue=0;render();const el=document.querySelector('[data-key="'+k+'"]');if(el)el.scrollIntoView({block:"start"});return}
+    S.open.has(k)?S.open.delete(k):S.open.add(k); render(); return}
+  if(t.dataset.sort){S.sort=t.dataset.sort;render();return}
+  if(t.dataset.venue!=null&&t.classList.contains("chip")){S.venue=+t.dataset.venue;render();return}
+  if(t.dataset.buy){
+    const [key,b]=t.dataset.buy.split("|"); const r=S.races.find(x=>x.key===key); const i=+b-1; if(!r||!r.pred)return;
+    const o=oddsOf(r,+b); if(!o)return;
+    if(S.bets.some(x=>x.date===S.date&&x.sid===r.sid&&x.rn===r.rn&&x.boat===+b)){t.textContent="記録済み";t.disabled=true;return}
+    S.bets.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:S.date,sid:r.sid,rn:r.rn,boat:+b,name:r.names[b],odds:o,stake:S.settings.stake,p:r.pred.p[i],ev:r.pred.p[i]*o,mode:r.pred.mode,at:new Date().toISOString(),res:null});
+    store.set("bk.bets",S.bets); t.textContent="記録しました"; t.disabled=true; $("#n-log").textContent=S.bets.length; return}
+  if(t.dataset.del){S.bets=S.bets.filter(x=>x.id!==t.dataset.del);store.set("bk.bets",S.bets);render();return}
+  if(t.id==="copycsv"){
+    const rows=[["date","venue","race","boat","odds","stake","p","ev","mode","result","payout"]].concat(S.bets.map(b=>[b.date,VENUES[b.sid],b.rn,b.boat,b.odds,b.stake,b.p.toFixed(4),b.ev.toFixed(3),b.mode,b.res?(b.res.won?"win":"lose"):"",b.res?Math.round(b.res.pay):""]));
+    const csv=rows.map(r=>r.join(",")).join("\n");
+    (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(csv):Promise.reject()).then(()=>{t.textContent="コピーしました"}).catch(()=>{t.textContent="コピーできませんでした"});return}
+  if(t.id==="pickfile"){$("#file").click();return}
+  if(t.id==="unlock"){const v=$("#pw").value; if(!v)return; t.disabled=true; t.textContent="確認中…";
+    tryUnlock(v).then(ok=>{if(ok){render();refresh()}else render()});return}
+  if(t.id==="forgetpw"){try{localStorage.removeItem("bk.pw")}catch(e){} S.models=null;S.locked=true;S.lockMsg="";render();return}
+  if(t.id==="wipe"){
+    if(t.dataset.arm!=="1"){t.dataset.arm="1";t.textContent="もう一度押すと消えます";return}
+    try{localStorage.clear()}catch(e){} S.bets=[];S.hist={};S.odds={};S.settings={th:1.3,cap:15,stake:100};render();return}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target&&e.target.id==="pw"){const b=$("#unlock");if(b)b.click()}});
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset&&el.dataset.odds){ // live EV update without re-rendering (keeps keyboard open)
+    const [key,b]=el.dataset.odds.split("|"); const r=S.races.find(x=>x.key===key); if(!r||!r.pred)return;
+    const v=parseFloat(String(el.value).replace(",","."));
+    S.odds[key]=S.odds[key]||{}; if(v>0)S.odds[key][b]=v; else delete S.odds[key][b]; saveOdds();
+    const i=+b-1, ev=v>0?r.pred.p[i]*v:null, buy=isBuy(r,i);
+    const cell=document.querySelector('[data-ev="'+key+'|'+b+'"]'); if(cell){cell.innerHTML="<small>期待値</small>"+(ev?ev.toFixed(2):"-");cell.className="ev "+(buy?"ok":"no")}
+    const tr=el.closest(".brow"); if(tr)tr.className="brow"+(buy?" mark":"");
+    refreshBits(r);
+    return;
+  }
+  if(el.id==="s-th"||el.id==="s-cap"||el.id==="s-stake"){
+    const v=parseFloat(String(el.value).replace(",",".")); if(!(v>=0))return;
+    if(el.id==="s-th"&&v>0)S.settings.th=v; if(el.id==="s-cap")S.settings.cap=v; if(el.id==="s-stake"&&v>0)S.settings.stake=Math.round(v);
+    saveSettings();
+  }
+});
+document.addEventListener("focusout",()=>{setTimeout(()=>{if(S.pending){const a=document.activeElement;if(!(a&&a.matches&&a.matches("input.odds,#s-th,#s-cap,#s-stake")))render()}},350)});
+document.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.id==="file"&&el.files&&el.files[0]){
+    const rd=new FileReader(); rd.onload=()=>{try{ingest(JSON.parse(rd.result),true)}catch(err){S.error="ファイルを読み取れませんでした。";render()}}; rd.readAsText(el.files[0]);
+  }
+});
+
+/* ---------- boot ---------- */
+async function boot(){
+  try{const r=await fetch("models.enc.json",{cache:"no-cache"});S.enc=await r.json()}catch(e){S.enc=null}
+  if(S.enc){
+    const saved=store.get("bk.pw",null);
+    if(saved)await tryUnlock(saved); else S.locked=true;
+    if(S.locked&&saved)S.lockMsg="";
+  }
+  render();
+  if(S.models)await refresh();
+  setInterval(()=>{if(!document.hidden&&!S.fromFile)refresh()},120000);
+  setInterval(()=>{if(!document.hidden&&S.tab!=="set"&&!document.activeElement.matches("input"))render()},30000);
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden&&!S.fromFile)refresh()});
+}
+boot();
+})();
+</script>
+</body>
+</html>
