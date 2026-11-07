@@ -243,6 +243,14 @@ function isBuy(r,i){
 function hotness(r){ // best expected value if the market priced the boat like our market estimate
   if(!r.pred)return 0; let m=0; r.pred.p.forEach((p,i)=>{m=Math.max(m,p*r.pred.estOdds[i])}); return m;
 }
+const CAND_MIN=1.15, CAND_MAX=2;
+function cands(r){ // boats worth a look: model likes it more than the market estimate, and the break-even odds are reachable
+  if(!r.pred||r.finished||closed(r))return [];
+  const th=S.settings.th,cap=S.settings.cap,out=[];
+  r.pred.p.forEach((p,i)=>{const need=th/p,v=p*r.pred.estOdds[i]; if(v>=CAND_MIN&&(cap<=0||need<=cap))out.push({i:i,p:p,need:need,v:v})});
+  out.sort((a,b)=>b.v-a.v); return out.slice(0,CAND_MAX);
+}
+function hasBet(r,b){return S.bets.some(x=>x.date===S.date&&x.sid===r.sid&&x.rn===r.rn&&x.boat===+b)}
 function closed(r){return r.closeAt&&r.closeAt<=new Date()}
 function mins(r){return r.closeAt?Math.round((r.closeAt-new Date())/60000):null}
 function hhmm(d){return d?String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"--:--"}
@@ -325,8 +333,14 @@ function viewPicks(){
   for(const r of S.races)if(r.pred&&!r.finished&&!closed(r))r.pred.p.forEach((p,i)=>{if(isBuy(r,i))buys.push({r:r,i:i,p:p,o:oddsOf(r,i+1)})});
   const fullN=up.filter(r=>r.pred.mode==="full").length;
   let h='<div class="summary"><div><b>'+up.length+'</b><span>発売中のレース</span></div><div><b>'+fullN+'</b><span>展示タイム入り</span></div><div><b>'+buys.length+'</b><span>買いサイン</span></div></div>';
+  const cl=[]; for(const r of up)for(const c of cands(r))cl.push({r:r,c:c}); cl.sort((a,b)=>a.r.closeAt-b.r.closeAt);
+  h+='<h2>候補('+cl.length+')</h2><p class="small" style="margin-top:0">公式サイトの単勝オッズが「必要」以上なら、ボタンを押すだけで記録できます(入力なし)。</p>';
+  if(!cl.length)h+='<div class="empty">いま候補はありません。</div>';
+  for(const x of cl){const r=x.r,c=x.c,m=mins(r),done=hasBet(r,c.i+1);
+    h+='<div class="card"><div class="pick">'+laneChip(c.i+1)+'<div class="info"><b>'+esc(r.venue)+' '+r.rn+'R</b> '+esc(r.names[c.i+1])+'<div>締切 '+hhmm(r.closeAt)+'(あと'+m+'分) ・ 勝率 '+pct(c.p)+' ・ '+(r.pred.mode==="full"?"展示あり":"展示待ち・暫定")+'</div></div><div class="big">'+c.need.toFixed(1)+'<small>倍以上</small></div></div>'
+      +'<div class="row" style="padding:0 12px 12px"><button class="btn buy" data-quick="'+r.key+'|'+(c.i+1)+'"'+(done?' disabled':'')+'>'+(done?'記録済み':'オッズが必要以上 → 買った('+S.settings.stake+'円)')+'</button></div></div>';}
   h+='<h2>買いサイン(期待値 '+S.settings.th.toFixed(2)+' 以上'+(S.settings.cap>0?'・'+S.settings.cap+'倍以下':'')+')</h2>';
-  if(!buys.length)h+='<div class="empty">まだありません。下のレースを開いて、公式の単勝オッズを入れてください。</div>';
+  if(!buys.length)h+='<div class="empty">まだありません。候補のオッズを公式サイトで見て、必要以上なら「買った」を押してください。</div>';
   buys.sort((a,b)=>a.r.closeAt-b.r.closeAt);
   for(const x of buys){
     const r=x.r,m=mins(r),ev=x.p*x.o;
@@ -362,7 +376,7 @@ function viewLog(){
     h+='<div class="card scroll"><table class="logt"><thead><tr><th>日</th><th>レース</th><th>艇</th><th>倍</th><th>期待</th><th>結果</th><th></th></tr></thead><tbody>';
     for(const b of S.bets.slice().reverse()){
       const res=b.res?(b.res.won?'<span class="pos">+'+Math.round(b.res.pay-b.stake)+'</span>':'<span class="neg">-'+b.stake+'</span>'):'待ち';
-      h+='<tr><td>'+esc(b.date.slice(5))+'</td><td>'+esc(VENUES[b.sid])+b.rn+'R</td><td>'+b.boat+'</td><td>'+b.odds+'</td><td>'+b.ev.toFixed(2)+'</td><td>'+res+'</td><td><button class="chip" data-del="'+b.id+'" aria-label="この記録を消す">消す</button></td></tr>';
+      h+='<tr><td>'+esc(b.date.slice(5))+'</td><td>'+esc(VENUES[b.sid])+b.rn+'R</td><td>'+b.boat+'</td><td>'+(b.odds?b.odds:'≥'+b.need)+'</td><td>'+(b.ev==null?'-':b.ev.toFixed(2))+'</td><td>'+res+'</td><td><button class="chip" data-del="'+b.id+'" aria-label="この記録を消す">消す</button></td></tr>';
     }
     h+='</tbody></table></div><div class="row"><button class="btn ghost" id="copycsv">記録をコピー(CSV)</button></div>';
   }
@@ -433,9 +447,14 @@ document.addEventListener("click",e=>{
     if(S.bets.some(x=>x.date===S.date&&x.sid===r.sid&&x.rn===r.rn&&x.boat===+b)){t.textContent="記録済み";t.disabled=true;return}
     S.bets.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:S.date,sid:r.sid,rn:r.rn,boat:+b,name:r.names[b],odds:o,stake:S.settings.stake,p:r.pred.p[i],ev:r.pred.p[i]*o,mode:r.pred.mode,at:new Date().toISOString(),res:null});
     store.set("bk.bets",S.bets); t.textContent="記録しました"; t.disabled=true; $("#n-log").textContent=S.bets.length; return}
+  if(t.dataset.quick){
+    const [key,b]=t.dataset.quick.split("|"); const r=S.races.find(x=>x.key===key); const i=+b-1; if(!r||!r.pred||hasBet(r,b))return;
+    const need=S.settings.th/r.pred.p[i];
+    S.bets.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,5),date:S.date,sid:r.sid,rn:r.rn,boat:+b,name:r.names[b],odds:null,need:Math.round(need*10)/10,stake:S.settings.stake,p:r.pred.p[i],ev:null,mode:r.pred.mode,at:new Date().toISOString(),res:null});
+    store.set("bk.bets",S.bets); t.textContent="記録しました"; t.disabled=true; $("#n-log").textContent=S.bets.length; return}
   if(t.dataset.del){S.bets=S.bets.filter(x=>x.id!==t.dataset.del);store.set("bk.bets",S.bets);render();return}
   if(t.id==="copycsv"){
-    const rows=[["date","venue","race","boat","odds","stake","p","ev","mode","result","payout"]].concat(S.bets.map(b=>[b.date,VENUES[b.sid],b.rn,b.boat,b.odds,b.stake,b.p.toFixed(4),b.ev.toFixed(3),b.mode,b.res?(b.res.won?"win":"lose"):"",b.res?Math.round(b.res.pay):""]));
+    const rows=[["date","venue","race","boat","odds","stake","p","ev","mode","result","payout"]].concat(S.bets.map(b=>[b.date,VENUES[b.sid],b.rn,b.boat,(b.odds||''),b.stake,b.p.toFixed(4),(b.ev==null?'':b.ev.toFixed(3)),b.mode,b.res?(b.res.won?"win":"lose"):"",b.res?Math.round(b.res.pay):""]));
     const csv=rows.map(r=>r.join(",")).join("\n");
     (navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(csv):Promise.reject()).then(()=>{t.textContent="コピーしました"}).catch(()=>{t.textContent="コピーできませんでした"});return}
   if(t.id==="pickfile"){$("#file").click();return}
